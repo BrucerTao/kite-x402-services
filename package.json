@@ -1,0 +1,14 @@
+{
+  "name": "kite-x402-services",
+  "private": true,
+  "type": "module",
+  "description": "Community catalog of HTTP APIs wrapped as x402 services paid on the Kite chain",
+  "scripts": {
+    "validate": "node scripts/validate.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.8.1"
+  }
+}
