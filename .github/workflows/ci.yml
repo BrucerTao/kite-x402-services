@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  manifests:
+    name: validate service manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate
+
+  template-go:
+    name: build templates/go-gin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: templates/go-gin/go.mod
+          cache-dependency-path: templates/go-gin/go.sum
+      - run: go build ./...
+        working-directory: templates/go-gin
+      - run: go vet ./...
+        working-directory: templates/go-gin
+
+  template-ts:
+    name: typecheck TypeScript projects
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: typecheck every package.json project with a typecheck script
+        run: |
+          set -euo pipefail
+          for pkg in templates/typescript-express services/*/; do
+            [ -f "$pkg/package.json" ] || continue
+            grep -q '"typecheck"' "$pkg/package.json" || continue
+            echo "== $pkg"
+            (cd "$pkg" && npm ci && npm run typecheck)
+          done
