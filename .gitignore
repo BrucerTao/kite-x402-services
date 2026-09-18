@@ -5,3 +5,6 @@ dist/
 
 # compiled Go template binary
 templates/go-gin/go-gin
+
+.kite-passport/
+.qoder/
