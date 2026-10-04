@@ -3,6 +3,11 @@
 A ready-to-deploy reverse proxy that charges x402 payments on the Kite chain
 for every request under `/v1/*` and forwards paid requests to `UPSTREAM_URL`.
 
+A request to `/v1/<path>` reaches the upstream as `join(UPSTREAM_URL path, /<path>)`
+— the same joining rule as the Go template — so put any endpoint prefix in
+`UPSTREAM_URL` (e.g. `https://api.open-meteo.com/v1` makes `/v1/forecast` reach
+`/v1/forecast` upstream instead of `/forecast`).
+
 ```bash
 npm install
 cp .env.example .env        # fill PAY_TO, UPSTREAM_URL, PRICE_USD
