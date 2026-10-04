@@ -83,25 +83,15 @@ Reverse-no-settle trigger: $BAD_ENDPOINT  (Open-Meteo 400)
 NOTE (Render free): the instance sleeps after ~15 min idle. Before EACH paid
 call below, re-warm it:  curl -s $HOST/healthz   (wait for 200), then execute.
 
-Next MANUAL steps (two payer options; either works):
-  A) Local harness used for the 1004-SPEC evidence (see evidence.md):
-       /tmp/fxpayer3/fxpayer3 "$HOST$ENDPOINT"        -> expect 200 + weather JSON + settle tx
-       /tmp/fxpayer3/fxpayer3 "$HOST$BAD_ENDPOINT"    -> expect 400 and NO new settle tx
-  B) Kite Passport agent (kpass 1.10.1, COLON form):
-       kpass health && kpass me                  # preflight; if not logged in:
-       kpass login init --email <YOUR_EMAIL> && kpass login verify --login-id <id> --code <OTP>
-       kpass wallet address                      # payer addr -> fund it (testnet, free):
-       kpass faucet drop --recipient <PAYER_ADDR> --token pieUSD && kpass wallet balance
-       kpass agent:register --type <type>
-       kpass agent:session create --max-amount-per-tx <amt> --ttl <dur> --assets pieUSD
-       kpass agent:session status --request-id <id> --wait        # requires approval
-       kpass agent:session use --session-id <id>
-       curl -s $HOST/healthz                     # WARM the free instance first
-       kpass agent:session execute --url "$HOST$ENDPOINT"
-       -> expect 200 + upstream weather body + settle tx hash; verify payee == PAY_TO
-       curl -s $HOST/healthz                     # WARM again
-       kpass agent:session execute --url "$HOST$BAD_ENDPOINT"     # upstream 400
-       -> expect 400 and NO new settle tx (payer balance unchanged)
+Next MANUAL steps (payer harness used for the 1004-SPEC evidence):
+  /tmp/fxpayer3/fxpayer3 "$HOST$ENDPOINT"        -> expect 200 + weather JSON + settle tx
+  /tmp/fxpayer3/fxpayer3 "$HOST$BAD_ENDPOINT"    -> expect 400 and NO new settle tx
+
+NOTE (2026-10-04): kpass agent:session execute cannot pay self-hosted hosts —
+Kite only executes hosts from its own catalog (host_not_in_executable_catalog)
+— and the testnet faucet channels (kpass CLI + faucet.gokite.ai) were down, so
+the payer must be an existing pieUSD holder with a backdated validAfter (the
+testnet chain head lags wall clock; SDK defaults revert on-chain). See AGENTS.md.
 
 Then: service.yaml status draft -> testnet, base_url: "$HOST"; npm run validate;
 then git commit (review diff for secrets first) + push to default branch.
