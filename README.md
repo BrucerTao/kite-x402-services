@@ -45,7 +45,7 @@ Both read the same environment variables:
 ```bash
 PAY_TO=0xYourKiteWallet          # receives the payments
 KITE_NETWORK=mainnet             # mainnet (USDC.e) or testnet (pieUSD)
-UPSTREAM_URL=https://api.open-meteo.com
+UPSTREAM_URL=https://api.open-meteo.com/v1   # base path is preserved (see below)
 PRICE_USD=0.001                  # per call
 UPSTREAM_AUTH_HEADER=Authorization   # optional: credential injected upstream
 UPSTREAM_AUTH_VALUE=Bearer sk-...    # never reaches the buyer
@@ -76,7 +76,10 @@ that decodes to:
 ```
 
 Every path under `/v1/` is paid and proxied to `UPSTREAM_URL` with the `/v1`
-prefix stripped. `/healthz` is free. That is the whole contract.
+prefix stripped and the remainder joined onto `UPSTREAM_URL`'s path — so an
+upstream endpoint prefix belongs in `UPSTREAM_URL` itself (e.g.
+`https://api.open-meteo.com/v1` makes `/v1/forecast` reach `/v1/forecast`
+upstream, not `/forecast`). `/healthz` is free. That is the whole contract.
 
 ## Go live
 
