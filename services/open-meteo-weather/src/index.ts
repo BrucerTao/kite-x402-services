@@ -64,7 +64,9 @@ app.use(
 const HOP_BY_HOP = new Set(["connection", "keep-alive", "transfer-encoding", "te", "trailer", "upgrade", "host", "content-length"]);
 
 app.all("/v1/*path", async (req: Request, res: Response) => {
-  const target = new URL(req.originalUrl.replace(/^\/v1/, ""), upstream);
+  // Join the upstream base path (same semantics as the Go template's reverse
+  // proxy): a root reference like "/forecast" would discard UPSTREAM_URL's path.
+  const target = new URL(upstream.pathname.replace(/\/+$/, "") + req.originalUrl.replace(/^\/v1/, ""), upstream);
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {
     if (v === undefined || HOP_BY_HOP.has(k) || k === "payment-signature") continue;

@@ -8,7 +8,7 @@ change is the `.env`.
 | | |
 |---|---|
 | Endpoint | `GET /v1/forecast` → `https://api.open-meteo.com/v1/forecast` |
-| Price | $0.001 per call in USDC.e (Kite mainnet) |
+| Price | $0.001 per call (pieUSD on Kite testnet, the default here) |
 | Upstream auth | none |
 
 ## Deploy
@@ -23,13 +23,19 @@ Any host that runs Node 22 works (Fly, Render, Cloud Run, a VPS). The service
 must be reachable over public https: Kite Passport fetches the URL server-side,
 so `localhost` and tunnels that require a browser check will not work.
 
+On Render, create a Web Service with Root Directory `services/open-meteo-weather`;
+the bundled [`render.yaml`](render.yaml) documents the native-Node build/start
+commands and environment variables. After deploying, run
+`./verify_public.sh https://<host>` to re-check `/healthz` and the 402 quote
+without spending funds.
+
 ## Try it
 
 ```bash
 curl -i "$BASE_URL/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m"
 # 402 with a PAYMENT-REQUIRED header until a payment is attached
 
-kpass agent session execute --method GET \
+kpass agent:session execute --method GET \
   --url "$BASE_URL/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m"
 # 200 + Open-Meteo JSON, paid from the agent's session
 ```

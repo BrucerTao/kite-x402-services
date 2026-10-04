@@ -3,15 +3,16 @@ name: open-meteo-weather
 display_name: Open-Meteo Weather
 description: >-
   Current conditions plus hourly and daily forecasts for any latitude/longitude,
-  from the free Open-Meteo API, priced per call in USDC.e on the Kite chain.
+  from the free Open-Meteo API, wrapped as an x402 paid service and priced per
+  call on the Kite network.
 maintainer:
-  github: lienhage
+  github: BrucerTao
 status: draft
-network: eip155:2366
-pay_to: "0x0000000000000000000000000000000000000000"   # quote it: bare 0x... parses as a YAML integer
+network: eip155:2368
+pay_to: "0x1a8374b0F0D1074849e0cA31589532C2ad2806d8"   # quote it: bare 0x... parses as a YAML integer
 upstream:
   name: Open-Meteo
-  url: https://open-meteo.com
+  url: https://api.open-meteo.com/v1
   requires_api_key: false
   terms_url: https://open-meteo.com/en/terms
 source: typescript-express
