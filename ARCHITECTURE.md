@@ -393,15 +393,19 @@ kpass agent:session execute --method GET \
 
 ## 9. Known issues
 
-### `open-meteo-weather` 尚未公网部署
+### `open-meteo-weather` 已上线 testnet（2026-10-04）
 
 上游路径问题已修复，两个模板使用同一条拼接规则：剥掉 `/v1` 前缀后，剩余路径拼接到 `UPSTREAM_URL` 的 base path 上（TS 版 `index.ts:69`；Go 侧为 `httputil.NewSingleHostReverseProxy` 的默认 director）。修复前 TS 版用 `new URL("/forecast", base)`，以 `/` 开头的相对引用会整体替换 base 的 path —— `UPSTREAM_URL=.../v1` 也会命中 `/forecast` → 404，且与 Go 模板行为不一致。现在 `UPSTREAM_URL=https://api.open-meteo.com/v1` 在两个模板下都把 `/v1/forecast` 送到上游的 `/v1/forecast`。
 
-示例服务的 `service.yaml` 与 `.env.example` 已同步（`upstream.url` = `https://api.open-meteo.com/v1`），本地 402 门禁与构建产物验证通过；状态仍为 `draft`，待公网 https 部署并通过真实付费验证后转 `testnet`。
+服务部署于 `https://open-meteo-weather-5d7z.onrender.com`（Render 免费档，Root Directory `services/open-meteo-weather`），`service.yaml` `status: testnet`；本地与公网的未付款 402 解码 4/4、真实付费（结算 tx 收款方 == `PAY_TO`）与反向不结算全部通过。
 
 ### Kite 测试网链头滞后于墙钟
 
 测试网出块头的滞后实测在 30–95 分钟之间。EIP-3009 授权如果用 SDK 默认的「当前时间 − 600s」作为 `validAfter`，链上会 revert `AuthorizationNotYetValid`；自建付款方应把回拨窗口调大（2 小时稳妥）。facilitator 的 `/verify` 不校验 `validAfter` 的新旧，只看签名有效性与 `validBefore` 是否在未来，所以链下验证不会因此失败，问题只在链上结算那一步暴露。
+
+### kpass 不能支付自建 host / 测试网水龙头停摆（2026-10-04 实测）
+
+kpass 1.10.1 可登录（邮箱 OTP）并创建、批准会话，但 `agent:session execute` 只放行 Kite 服务目录内的 host —— 自建公网服务被 `host_not_in_executable_catalog` 拒绝（week1 的公网付费实际走的也是自建 fxpayer）。同期 `kpass faucet`（prod/staging）与网页水龙头后端均不可用，新钱包领不到 pieUSD。自建服务的付费验证 = 自建 payer（fxpayer 模式）+ 已持有 pieUSD 的钱包做资金源；详见 AGENTS.md「已知问题」。
 
 ---
 

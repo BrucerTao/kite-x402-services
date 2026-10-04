@@ -127,9 +127,9 @@ terms 页返回 403。
 
 ## 已知问题
 
-- **示例服务 `open-meteo-weather` 待公网部署**（status 仍 `draft`）：TS 模板的
-  base path 拼接已修复（见上文与 ARCHITECTURE.md 第 9 节），本地 402 门禁、
-  构建产物与上游路径均已验证；部署到公网 https 并通过真实付费验证后转 `testnet`
+- **open-meteo-weather 已上线 testnet（2026-10-04）**：`https://open-meteo-weather-5d7z.onrender.com`
+  （Render 免费档，闲置 ~15min 休眠）。本地与公网的真实付费（结算 tx 见服务 README）
+  与反向不结算均通过；TS/Go base-path 一致性修复详见上文与 ARCHITECTURE.md 第 9 节
 - **Kite 测试网链头滞后于墙钟**（实测 30–95 分钟）：EIP-3009 授权用 SDK 默认的
   「当前时间 − 600s」`validAfter` 会在链上 revert `AuthorizationNotYetValid`。
   自建付款方要把回拨窗口调大（2h 稳妥）；facilitator `/verify` 不校验
