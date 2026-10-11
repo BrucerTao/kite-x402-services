@@ -129,11 +129,28 @@ terms 页返回 403。
 
 - **open-meteo-weather 已上线 testnet（2026-10-04）**：`https://open-meteo-weather-5d7z.onrender.com`
   （Render 免费档，闲置 ~15min 休眠）。本地与公网的真实付费（结算 tx 见服务 README）
-  与反向不结算均通过；TS/Go base-path 一致性修复详见上文与 ARCHITECTURE.md 第 9 节
+  与反向不结算均通过；TS/Go base-path 一致性修复详见上文与 ARCHITECTURE.md 第 9 节。
+  ⚠️ Open-Meteo 免费档禁商用，本服务终态就是 `testnet`，**不升 `live`**
+- **usgs-earthquakes 已上线 testnet（2026-10-11）**：`https://usgs-earthquakes.onrender.com`
+  （Render 免费档，原生 Node 22）。`src/` 与 TS 模板逐字节相同。公网 + 本地各一笔真实付费
+  （tx `0x9c66a3bd…b5ea` / `0xfbc83dfd…84a7`，收款方均为 `PAY_TO`），公网反向 400 无结算；
+  轮末 payer 余额归零、无资金滞留。证据见 `evidence-usgs.md`
 - **Kite 测试网链头滞后于墙钟**（实测 30–95 分钟）：EIP-3009 授权用 SDK 默认的
   「当前时间 − 600s」`validAfter` 会在链上 revert `AuthorizationNotYetValid`。
   自建付款方要把回拨窗口调大（2h 稳妥）；facilitator `/verify` 不校验
   `validAfter` 的新旧，只看签名与 `validBefore` 是否在未来
+- **测试网按需出块：链头旧 ≠ 结算慢**（2026-10-11 实测）：空闲时相邻区块间隔 7.4/63/16.5/12.9
+  分钟且每块只有 1 笔交易 —— 没交易就不出块。两笔结算都在提交后 ~1 分钟内上块（相邻区块）。
+  facilitator **不等确认就返回**（往返 4.4s / 7.8s），receipt 要自己轮询
+- **EIP-3009 授权在窗口内可重放，与上次是否失败无关**：facilitator 因 `insufficient_funds`
+  拒绝后授权仍有效，钱包一到账重放同一段 `PAYLOAD` 就会真实结算。存证据文件前要么抹掉
+  `signature`，要么确认 `validBefore` 已过
+- **一次性付款方私钥别放 `/tmp`**：macOS 清理 `/tmp` 导致 week3 的 fxpayer 密钥丢失、
+  钱包里 0.001 pieUSD 沉没。改放仓库外 `~/.kite-x402/<name>.key`（0600），harness 用
+  `PAYER_KEY_FILE` 覆盖；充值前先确认密钥还在（仓库外=不会误提交，但也没备份）
+- **`.env` 里含空格的值必须加引号**：`set -a; . ./.env` 会在第一个空格处静默截断，
+  `SERVICE_DESCRIPTION=USGS earthquake catalog queries` 实际只留 `USGS`，服务退回通用 402 描述
+  （`services/open-meteo-weather/.env:5` 同病）
 - **测试网付费测试的通道限制（2026-10-04 实测）**：① 水龙头两条渠道都断——`kpass faucet`
   在 prod/staging 均报 "faucet is disabled"，网页版后端 `/api/sendToken` 对所有 token 组合
   返回 500（rateLimiter 部署 bug），**新钱包领不到 pieUSD**；② `kpass agent:session execute`
@@ -142,6 +159,8 @@ terms 页返回 403。
   钱包转来的 pieUSD；kpass 路径仅在 Kite 把 host 放入目录/白名单后可用
 - `templates/typescript-express/package-lock.json` 可能因 npm 版本差异产生
   `"peer": true` 被删的无关改动，提交前还原
+- **本地起服务前先确认端口空闲**（`lsof -i :<port>`），启动后核对日志里的上游 URL，
+  测完立刻 kill 并复查端口已释放；同机可能有别的项目的 node 进程，只 kill 自己起的
 
 ---
 

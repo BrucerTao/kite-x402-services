@@ -407,6 +407,38 @@ kpass agent:session execute --method GET \
 
 kpass 1.10.1 可登录（邮箱 OTP）并创建、批准会话，但 `agent:session execute` 只放行 Kite 服务目录内的 host —— 自建公网服务被 `host_not_in_executable_catalog` 拒绝（week1 的公网付费实际走的也是自建 fxpayer）。同期 `kpass faucet`（prod/staging）与网页水龙头后端均不可用，新钱包领不到 pieUSD。自建服务的付费验证 = 自建 payer（fxpayer 模式）+ 已持有 pieUSD 的钱包做资金源；详见 AGENTS.md「已知问题」。
 
+### `usgs-earthquakes` 已上线 testnet（2026-10-11）
+
+部署于 `https://usgs-earthquakes.onrender.com`（Render 免费档，Root Directory `services/usgs-earthquakes`，原生 Node 22），`service.yaml` `status: testnet`。服务 `src/` 与 `templates/typescript-express/src/` 逐字节相同，全部差异都在配置里。
+
+公网与本地各跑通一笔真实付费：200 + GeoJSON + 结算 tx（`0x9c66a3bd…b5ea` / `0xfbc83dfd…84a7`，收款方均为 `PAY_TO`）；公网反向请求（`starttime=not-a-date`）上游返 400，**无 `PAYMENT-RESPONSE` 头、无结算交易**。轮末付款方余额归零、`PAY_TO` 收到 0.002 pieUSD，没有资金滞留。细节见 [`evidence-usgs.md`](evidence-usgs.md)。
+
+### Open-Meteo 免费档仅限非商业 → `open-meteo-weather` 不升 `live`
+
+Open-Meteo 的免费 API 条款把商业用途排除在外，而 `live` 状态在 CONTRIBUTING.md 里对应「主网真实结算」，即付费转售上游数据。因此 `open-meteo-weather` 的终态就是 `testnet`：测试网 pieUSD 无真实价值，属技术验证；要升 `live` 必须先拿到商业授权（付费套餐或书面许可）并把结论写进 `upstream.terms_url`。选新上游时先复核这一条，别等到部署完才发现不能收钱。
+
+### 一次性付款方私钥不要放 `/tmp`（已沉没 0.001 pieUSD）
+
+week3 把 fxpayer 的私钥生成在 `/tmp/fxpayer4/`，macOS 定期清理 `/tmp` 后密钥丢失，钱包里剩的 0.001 pieUSD 无法转出（金额小于任何一次转账的必要性阈值，只能放弃）。改放仓库外且权限 0600 的 `~/.kite-x402/<name>.key`，harness 用 `PAYER_KEY_FILE` 覆盖路径。**注意 `~/.kite-x402/` 在仓库外，不会被误提交；但反过来也没有备份，充值前先确认密钥还在。**
+
+### EIP-3009 授权窗口内可重放，与「上次是否失败」无关
+
+`transferWithAuthorization` 的授权只是一段带签名的窗口（`validAfter` … `validBefore`）。facilitator 因付款方余额不足而拒绝后，**授权本身仍然有效**：一旦钱包到账，同一段 `PAYLOAD` 重放就会真实结算。week4 的未付款冒烟测试留下的授权，在充值后成了活的凭证。
+
+两条纪律：① 把 harness 输出存进证据文件前，要么当场抹掉 `signature`，要么确认 `validBefore` 已过；② 调试时不要把「已经失败过」当成「已经作废」。
+
+### 测试网按需出块：链头滞后 ≠ 结算慢
+
+空闲时实测相邻区块间隔 7.4 / 63 / 16.5 / 12.9 分钟，每个区块恰好 1 笔交易 —— 链不是卡住，而是没有交易就不出块。两笔结算交易都在提交后 ~1 分钟内上块（22042202 / 22042203 相邻）。facilitator **不等确认就返回**（HTTP 往返 4.4 s / 7.8 s），所以 `settle` 返回后必须自己轮询 receipt；但看到 `latest` 区块时间戳很旧时不必恐慌，也不用等「链追上墙钟」。
+
+### `.env` 里含空格的值必须加引号
+
+启动脚本用 `set -a; . ./.env` 加载，未加引号的值在第一个空格处静默截断：`SERVICE_DESCRIPTION=USGS earthquake catalog queries` 实际只留下 `USGS`，后续单词被当成命令（报错被吞），服务退回通用的 402 描述。`services/open-meteo-weather/.env:5` 同样有此问题。要么给值加双引号，要么用不含空格的描述。
+
+### 本地起服务前先确认端口是空的
+
+week3 出现过旧进程占着端口、新代码没生效却在打旧逻辑的情况。起服务前 `lsof -i :<port>` 确认空闲，启动后核对日志里的上游 URL 是本次要测的那个，测完立刻 kill 并复查端口已释放。同一台机器上可能有别的项目的 node 进程，只 kill 自己起的。
+
 ---
 
 ## 10. 文件索引
@@ -421,5 +453,8 @@ kpass 1.10.1 可登录（邮箱 OTP）并创建、批准会话，但 `agent:sess
 | `templates/typescript-express/src/index.ts` | 支付中间件 + 反向代理（TS） |
 | `templates/go-gin/kite.go` | Kite 链常量 + money parser（Go） |
 | `templates/go-gin/main.go` | 支付中间件 + 反向代理（Go） |
-| `services/open-meteo-weather/` | 示例服务（代码就绪，待公网部署转 `testnet`） |
+| `services/open-meteo-weather/` | 示例服务（testnet，`https://open-meteo-weather-5d7z.onrender.com`） |
+| `services/frankfurter-fx/` | 汇率服务（testnet，Go 模板） |
+| `services/usgs-earthquakes/` | USGS 地震目录（testnet，`https://usgs-earthquakes.onrender.com`） |
+| `evidence-usgs.md` | `usgs-earthquakes` 公网全链路付费验证记录 |
 | `.github/workflows/ci.yml` | CI：校验 manifest、构建 Go 模板、typecheck 所有 TS 项目 |
