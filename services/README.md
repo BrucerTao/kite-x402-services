@@ -10,7 +10,7 @@ One directory per wrapped API. Each directory contains:
 |---|---|---|---|---|
 | [open-meteo-weather](open-meteo-weather) | testnet | eip155:2368 | `GET /v1/forecast` | @BrucerTao |
 | [frankfurter-fx](frankfurter-fx) | testnet | eip155:2368 | `GET /v1/latest` | @BrucerTao |
-| [usgs-earthquakes](usgs-earthquakes) | draft | eip155:2368 | `GET /v1/query` | @BrucerTao |
+| [usgs-earthquakes](usgs-earthquakes) | testnet | eip155:2368 | `GET /v1/query` | @BrucerTao |
 
 Add a row when you add a service. `status` meanings: `draft` = code only,
 `testnet` = deployed and charging pieUSD on Kite testnet, `live` = deployed and

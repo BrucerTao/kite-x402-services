@@ -3,7 +3,10 @@
 Wraps the [USGS Earthquake Catalog](https://earthquake.usgs.gov/earthquakes/search/)
 (FDSN event API) as an x402 service on the Kite chain. Built from the
 [typescript-express template](../../templates/typescript-express); `src/` is
-byte-identical to the template, the only change is the `.env`.
+byte-identical to the template, so everything service-specific lives in the
+config (`.env`, `service.yaml`, `render.yaml`).
+
+Live: <https://usgs-earthquakes.onrender.com>
 
 | | |
 |---|---|
@@ -58,21 +61,23 @@ The settlement rule is "charge only if the upstream status is < 400". With
 `metadata.status: 400` and `title: "Search Error"`, so a failed lookup would be
 charged. Bad parameters without that flag return a real 400 and cost nothing.
 
-## Verification status (Kite testnet, 2026-10-11)
+## Verified end-to-end (Kite testnet, 2026-10-11)
 
 | Check | Result |
 |---|---|
 | `src/` vs template `src/` | `diff -r` empty (byte-identical) |
-| `npm run typecheck` | pass |
 | Base-path join (`index.ts:69`) | `/v1/query?…` → `https://earthquake.usgs.gov/fdsnws/event/1/query?…`, query preserved |
-| Local `GET /healthz` | 200 `{ok:true, network:"eip155:2368", asset:"pieUSD", price:"$0.001"}` |
-| Local unpaid `GET /v1/query` | 402 + `PAYMENT-REQUIRED`; decoded 4/4 (`eip155:2368` / pieUSD / v1 / `1000000000000000`) |
-| Local build smoke (`npm run build` + `node dist/index.js`) | 200 + 402, decoded 4/4 — the exact Render build/start commands |
-| Payer harness end-to-end plumbing | signs EIP-3009 and reaches the facilitator; with an unfunded payer the service returns 402 `insufficient_funds`, no upstream call, no charge |
-| Paid call + settlement tx | **pending** — needs pieUSD in the payer wallet (both testnet faucets are down) |
-| Public https deploy + paid call | **pending** — `status` stays `draft` until then |
+| `GET /healthz` (local + public) | 200 `{ok:true, network:"eip155:2368", asset:"pieUSD", price:"$0.001"}` |
+| Unpaid `GET /v1/query` (local + public) | 402 + `PAYMENT-REQUIRED`; decoded 5/5 — `eip155:2368`, pieUSD, v1, `1000000000000000`, and `resource.description` is the USGS one |
+| Paid `GET /v1/query` (public, the manifest `example_request`) | 200 in 4.4 s + GeoJSON `FeatureCollection` (`metadata.status:200`, `api:2.8.1`, 4 features M5.5–M5.9); settle tx [`0x9c66a3bd…b5ea`](https://testnet.kitescan.ai/tx/0x9c66a3bddafd5c0160cdd91e56f80603f8ff8360450b7222c2eb9f4f3145b5ea), block 22042202, status `0x1`, Transfer payer → `PAY_TO` 0.001 pieUSD |
+| Paid `GET /v1/query` (local, same request) | 200 in 7.8 s; settle tx [`0xfbc83dfd…84a7`](https://testnet.kitescan.ai/tx/0xfbc83dfd2ce2c4999ddbf204ad49a857d62d216e98c66fec9963d1ad76cf84a7), block 22042203, status `0x1`, same 0.001 pieUSD Transfer |
+| `starttime=not-a-date` (upstream 400) | 400 `Bad starttime value "not-a-date"`, **no `Payment-Response`, no settlement**, balances unchanged |
+| Final balances | payer 0.000 / `PAY_TO` 0.002 — both payments returned to the payee, net zero, nothing stranded |
+| `npm run validate` (repo root) | exit 0, `✓ 3 service manifest(s) valid` |
 
-Full run logs: [`evidence-usgs.md`](../../evidence-usgs.md).
+Live at `https://usgs-earthquakes.onrender.com` (Render free tier; sleeps after
+~15 min idle — warm it with `curl <host>/healthz` before a paid call). Full run
+logs: [`evidence-usgs.md`](../../evidence-usgs.md).
 
 ## Data credit
 
